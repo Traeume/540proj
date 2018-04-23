@@ -35,6 +35,32 @@ function obj(X, Y, W, adj_mat, C, lambda)
     return res
 end
 
+function get_grad(X, Y, W, L, C, lambda)
+    N, D = size(X)
+    K = size(W, 2)
+    XT = X';
+    res = W*L
+    for i = 1:K
+        #@printf "i=%d\n" i
+        wi = W[:,i]
+        score = X*wi
+        Yi = full(Y[:,i])
+        Yi = (Yi-0.5)*2
+        tmp = 1 - Yi.*score
+        for j = 1:N
+            if tmp[j] > 0
+                xj = XT[:,j]
+                idx, vals = findnz(xj)
+                for pp in length(idx)
+                    res[ idx[pp] ,i] += (2*C*tmp[j]*(-Yi[j]))*vals[pp] 
+                end
+                #res[:,i] += (2*C*tmp[j]*(-Yi[j]))*X[j,:]
+            end
+        end
+    end
+    return res
+end
+
 function linesearch(X, Y, W, d, g, adj_mat, C, lambda, alpha=1, maxiter=10, eta=0.01)
     #dTd = dot(d,d)
     D, K = size(W)
@@ -48,6 +74,9 @@ function linesearch(X, Y, W, d, g, adj_mat, C, lambda, alpha=1, maxiter=10, eta=
             break
         end
         alpha = alpha/2
+        if i == maxiter
+            error("line search failed") 
+        end
     end
     return alpha
 end
