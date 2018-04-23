@@ -1,3 +1,24 @@
+# stolen from Mark Schmidt findmin.jl and misc.jl
+### A function to compute the gradient numerically
+# func = (W) -> obj(X, Y, W, adj_mat, C, lambda)
+function numGrad(func,W)
+	D, K = size(W);
+	delta = 2*sqrt(1e-12)*(1+vecnorm(W))
+	g = zeros(D, K)
+	e_ij = zeros(D, K)
+	for i = 1:D
+        for j = 1:K
+    		e_ij[i,j] = 1
+    		(fxp,) = func(W + delta*e_ij)
+    		(fxm,) = func(W - delta*e_ij)
+    		g[i,j] = (fxp - fxm)/(2*delta)
+    		e_ij[i] = 0
+            println(@sprintf("g[%d,%d]=%e",i,j,g[i,j]))
+        end
+	end
+	return g
+end
+
 function grad_obj(X,Y,W,A,C,lambda)
     # computes the smooth part of obj
     N, D = size(X)
@@ -15,8 +36,8 @@ function grad_obj(X,Y,W,A,C,lambda)
         # Graph recursive regularization
         neighbours = find(A[j,:])
         l = length(neighbours)
-        g = g + 4*l*wj
-        g = g - sparse(4*W[:,neighbours]*ones(l))
+        g = g + 2*l*wj
+        g = g - 2*sparse(W[:,neighbours]*ones(l))
         G[:,j] = g
     end
     return G
@@ -58,7 +79,7 @@ function proxGradUpdate(X, Y, W, A, C, lambda; alpha=1, eta=0.01, maxIter=10)
     return W
 end
 
-function mainProx(X, Y, K, A, C, lambda, alpha; maxIter = 100)
+function mainProx(X, Y, K, A, C, lambda; maxIter = 100)
     N, D = size(X)
     W = sparse([1],[1],[0.0],D,K)
     obj_val = obj(X, Y, W, A, C, lambda)
@@ -75,4 +96,4 @@ X, Y = read("../data/diatoms/train_remap.txt")
 K = size(Y,1)
 Y = Y'
 adj_mat = read_cat_hier("../data/diatoms/hr_remap.txt", K)
-mainProx(X, Y, K, adj_mat, 1, 1, 0.00005,maxIter = 25)
+mainProx(X, Y, K, adj_mat, 1, 1,maxIter = 25)
