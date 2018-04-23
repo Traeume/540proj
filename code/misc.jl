@@ -27,7 +27,7 @@ function obj(X, Y, W, adj_mat, C, lambda)
         tmp = nzrange(adj_mat, i)
         neighbours = rows[tmp]
         for j in neighbours
-            res += vecnorm( W[:,i]-W[:,j], 2 )^2 
+            res += vecnorm( W[:,i]-W[:,j], 2 )^2
         end
     end
     #L = sparse(Dmat - adj_mat)
@@ -39,7 +39,8 @@ function get_grad(X, Y, W, L, C, lambda)
     N, D = size(X)
     K = size(W, 2)
     XT = X';
-    res = W*L
+    # res = W*L
+    res = 4*W*L
     for i = 1:K
         #@printf "i=%d\n" i
         wi = W[:,i]
@@ -52,7 +53,7 @@ function get_grad(X, Y, W, L, C, lambda)
                 xj = XT[:,j]
                 idx, vals = findnz(xj)
                 for pp in length(idx)
-                    res[ idx[pp] ,i] += (2*C*tmp[j]*(-Yi[j]))*vals[pp] 
+                    res[ idx[pp] ,i] += (2*C*tmp[j]*(-Yi[j]))*vals[pp]
                 end
                 #res[:,i] += (2*C*tmp[j]*(-Yi[j]))*X[j,:]
             end
@@ -75,8 +76,29 @@ function linesearch(X, Y, W, d, g, adj_mat, C, lambda, alpha=1, maxiter=10, eta=
         end
         alpha = alpha/2
         if i == maxiter
-            error("line search failed") 
+            error("line search failed")
         end
     end
     return alpha
+end
+
+# stolen from Mark Schmidt findmin.jl and misc.jl
+### A function to compute the gradient numerically
+# func = (W) -> obj(X, Y, W, adj_mat, C, lambda)
+function numGrad(func,W)
+	D, K = size(W);
+	delta = 2*sqrt(1e-12)*(1+vecnorm(W))
+	g = zeros(D, K)
+	e_ij = zeros(D, K)
+	for i = 1:N
+        for j = 1:K
+    		e_ij[i,j] = 1
+    		(fxp,) = func(W + delta*e_ij)
+    		(fxm,) = func(W - delta*e_ij)
+    		g[i,j] = (fxp - fxm)/(2*delta)
+    		e_ij[i] = 0
+            println(@sprintf("g[%d,%d]=%e",i,j,g[i,j]))
+        end
+	end
+	return g
 end
