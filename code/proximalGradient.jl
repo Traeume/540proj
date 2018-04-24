@@ -1,32 +1,31 @@
 # stolen from Mark Schmidt findmin.jl and misc.jl
 ### A function to compute the gradient numerically
 # func = (W) -> obj(X, Y, W, adj_mat, C, lambda)
-function numGrad(func,W)
+function numGrad(func,W;rows=1:size(W,1),cols=1:size(W,2))
 	D, K = size(W);
 	delta = 2*sqrt(1e-12)*(1+vecnorm(W))
 	g = zeros(D, K)
 	e_ij = zeros(D, K)
-	for i = 1:D
-        for j = 1:K
+    for j = cols
+	    for i = rows
     		e_ij[i,j] = 1
     		(fxp,) = func(W + delta*e_ij)
     		(fxm,) = func(W - delta*e_ij)
     		g[i,j] = (fxp - fxm)/(2*delta)
-    		e_ij[i] = 0
-            println(@sprintf("g[%d,%d]=%e",i,j,g[i,j]))
+    		e_ij[i,j] = 0
+            println(@sprintf("g[%d,%d]=%e where delta=%e, fxp-fxm=%e",i,j,g[i,j],delta,fxp-fxm))
         end
 	end
 	return g
 end
 
+# computes gradient of the smooth part of obj
 function grad_obj(X,Y,W,A,C,lambda)
-    # computes the smooth part of obj
     N, D = size(X)
     K = size(W, 2)
     W = sparse(W)
     G = sparse([1],[1],[0.0],D,K)
     # find gradient
-    # G = get_grad(X, Y, W, L, C, lambda)
     for j=1:K
         wj = W[:,j]
         Yj = full(Y[:,j])*2 - 1
@@ -43,6 +42,35 @@ function grad_obj(X,Y,W,A,C,lambda)
     return G
 end
 
+# # computes obj and gradient of smooth part of obj
+# function obj_grad(X, Y, W, adj_mat, C, lambda)
+#     N, D = size(X)
+#     K = size(W, 2)
+#     res = 0
+#     G =
+#     for i = 1:K
+#         #@show(i)
+#         wi = W[:,i]
+#         score = X*wi
+#         Yi = full(Y[:,i])
+#         Yi = (Yi-0.5)*2
+#         # L2-hinge loss
+#         res += C* sum((max.(0, 1 - score.*Yi)).^2 )
+#         # L1 regularization
+#         res += lambda*vecnorm(wi, 1)
+#     end
+#     # recursive regularization
+#     rows = rowvals(adj_mat)
+#     for i = 1:K
+#         tmp = nzrange(adj_mat, i)
+#         neighbours = rows[tmp]
+#         for j in neighbours
+#             res += vecnorm( W[:,i]-W[:,j], 2 )^2 / 2
+#         end
+#     end
+#     return res
+# end
+
 function proxGradUpdate(X, Y, W, A, C, lambda; alpha=1, eta=0.01, maxIter=10)
     # alpha is step size
     N, D = size(X)
@@ -51,11 +79,11 @@ function proxGradUpdate(X, Y, W, A, C, lambda; alpha=1, eta=0.01, maxIter=10)
     L = sparse(1:K,1:K,A*ones(K)) - A
     obj_old = obj(X, Y, W, A, C, lambda)
     # find gradient
-    G = grad_obj(X, Y, W, A, C, lambda)
-    G1 = get_grad(X, Y, W, L, C, lambda)
-    if !(G ≈ G1)
-        println("Two gradients differ.")
-    end
+    G = get_grad(X, Y, W, L, C, lambda)
+    # G1 = grad_obj(X, Y, W, A, C, lambda)
+    # if !(G ≈ G1)
+    #     println("Two gradients differ.")
+    # end
 
     # line search
     for iter=1:maxIter
@@ -91,9 +119,9 @@ function mainProx(X, Y, K, A, C, lambda; maxIter = 100)
     end
     return W
 end
-
-X, Y = read("../data/diatoms/train_remap.txt")
-K = size(Y,1)
-Y = Y'
-adj_mat = read_cat_hier("../data/diatoms/hr_remap.txt", K)
-mainProx(X, Y, K, adj_mat, 1, 1,maxIter = 25)
+#
+# X, Y = read("../data/diatoms/train_remap.txt")
+# K = size(Y,1)
+# Y = Y'
+# adj_mat = read_cat_hier("../data/diatoms/hr_remap.txt", K)
+# mainProx(X, Y, K, adj_mat, 1, 1,maxIter = 25)

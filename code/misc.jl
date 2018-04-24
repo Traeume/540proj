@@ -8,7 +8,7 @@ function obj(X, Y, W, adj_mat, C, lambda)
     #    Diag[i] = sum( vals[tmp] )
     #end
     #Dmat = sparse(diagm(Diag))
-    res = 0
+    res = 0.0
     #score_mat = X * W
     for i = 1:K
         #@show(i)
@@ -52,7 +52,7 @@ function get_grad(X, Y, W, L, C, lambda)
             if tmp[j] > 0
                 xj = XT[:,j]
                 idx, vals = findnz(xj)
-                for pp in length(idx)
+                for pp in 1:length(idx)
                     res[ idx[pp] ,i] += (2*C*tmp[j]*(-Yi[j]))*vals[pp]
                 end
                 #res[:,i] += (2*C*tmp[j]*(-Yi[j]))*X[j,:]
