@@ -48,13 +48,11 @@ function proximal_newton(X, Y, A, C, lambda, tol=1e-4, eps = 1e-4, maxiter = 100
         #get active set
         rows = zeros(Int64, 0)
         cols = zeros(Int64, 0)
-        #vals = zeros(Float64, 0)
         for j = 1:D
             for k = 1:K
                 if abs(g[j,k]) > lambda - eps
                     push!(rows, j)
                     push!(cols, k)
-                    #push!(vals, 1.0)
                 end
             end
         end
@@ -68,7 +66,7 @@ function proximal_newton(X, Y, A, C, lambda, tol=1e-4, eps = 1e-4, maxiter = 100
         cols = cols[perm]
         
         @printf "start coordinate descent!\n"
-        for l in 1:length(rows)
+        for l = 1:length(rows)
             j = rows[l]
             k = cols[l]
             
@@ -83,7 +81,7 @@ function proximal_newton(X, Y, A, C, lambda, tol=1e-4, eps = 1e-4, maxiter = 100
             idxs, vals = findnz(Lk)
             for pp = 1:length(idxs)
                 kk = idxs[pp]
-                H0w += W[j,kk]*vals[pp] 
+                H0w += 2*W[j,kk]*vals[pp] 
             end
     
             xj = X[:,j]
@@ -104,13 +102,26 @@ function proximal_newton(X, Y, A, C, lambda, tol=1e-4, eps = 1e-4, maxiter = 100
             w_jk = W[j,k] + delta_jk
             if w_jk > lambda/h0
                 w_jk -= lambda/h0 
-            elseif w_jk < lambda/h0
+            elseif w_jk < -lambda/h0
                 w_jk += lambda/h0
             else
                 w_jk = 0
             end
             
             diff = w_jk - W[j,k]
+            
+            obj1 = lambda*abs(W[j,k])
+            obj2 = h0/2*diff^2 + diff*deno + lambda*abs(W[j,k]+diff)
+            
+            if obj1 < obj2
+                @printf "check coordinate descent: %f, %f" obj1 obj2
+                @printf "l: %d\n" l
+                error("coordinate descent error") 
+            end
+            
+            #@printf "check coordinate descent: %f, %f" obj1 obj2
+            
+            
             W[j,k] = w_jk
             
             #update XW
